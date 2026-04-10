@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import ShopPage from "./pages/ShopPage";
 import ProductPage from "./pages/ProductPage";
 import CartDrawer from "./components/CartDrawer";
+import AdminPage from "./pages/AdminPage";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home");
@@ -44,11 +45,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <Navbar
-        onNavigate={navigate}
-        cartCount={cart.reduce((s, i) => s + i.qty, 0)}
-        onCartOpen={() => setCartOpen(true)}
-      />
+      {currentPage !== "admin" && (
+        <Navbar
+          onNavigate={navigate}
+          cartCount={cart.reduce((s, i) => s + i.qty, 0)}
+          onCartOpen={() => setCartOpen(true)}
+        />
+      )}
 
       {currentPage === "home" && (
         <HomePage
@@ -61,6 +64,7 @@ export default function App() {
           onAddToCart={addToCart}
         />
       )}
+
       {currentPage === "shop" && (
         <ShopPage
           initialCategory={selectedCategory}
@@ -68,6 +72,7 @@ export default function App() {
           onAddToCart={addToCart}
         />
       )}
+
       {currentPage === "product" && selectedProduct && (
         <ProductPage
           product={selectedProduct}
@@ -77,14 +82,20 @@ export default function App() {
         />
       )}
 
-      <CartDrawer
-        open={cartOpen}
-        onClose={() => setCartOpen(false)}
-        cart={cart}
-        onRemove={removeFromCart}
-      />
+      {currentPage === "admin" && <AdminPage />}
 
-      <Footer onNavigate={navigate} />
+      {currentPage !== "admin" && (
+        <CartDrawer
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          cart={cart}
+          onRemove={removeFromCart}
+        />
+      )}
+
+      {currentPage !== "admin" && (
+        <Footer onNavigate={navigate} />
+      )}
     </div>
   );
 }
