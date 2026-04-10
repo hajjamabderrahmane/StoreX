@@ -23,6 +23,12 @@ export default function Navbar({ onNavigate, cartCount, onCartOpen }) {
           <button onClick={() => { onNavigate("shop"); setMenuOpen(false); }}>Shop</button>
           <button onClick={() => { onNavigate("shop"); setMenuOpen(false); }}>New Arrivals</button>
           <button onClick={() => { onNavigate("shop"); setMenuOpen(false); }}>Sale</button>
+          <button
+            onClick={() => { onNavigate("admin"); setMenuOpen(false); }}
+            style={{ opacity: 0.4, fontSize: "11px", letterSpacing: "0.1em" }}
+          >
+            Admin
+          </button>
         </div>
 
         {/* Logo center */}
@@ -32,7 +38,7 @@ export default function Navbar({ onNavigate, cartCount, onCartOpen }) {
 
         {/* Actions right */}
         <div className="navbar__actions">
-          <a
+          
             href="https://instagram.com/storex_officiel"
             target="_blank"
             rel="noreferrer"
@@ -45,7 +51,7 @@ export default function Navbar({ onNavigate, cartCount, onCartOpen }) {
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
             </svg>
           </a>
-          <a
+          
             href="https://wa.me/212600000000"
             target="_blank"
             rel="noreferrer"
