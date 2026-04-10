@@ -1,55 +1,15 @@
 import { useState, useEffect, useRef } from "react";
+import { products as INITIAL_PRODUCTS } from "../data/products";
 
-const INITIAL_PRODUCTS = [
-  {
-    id: 1,
-    name: "Obsidian Cargo Trouser",
-    price: "340",
-    category: "Bottoms",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&q=80",
-  },
-  {
-    id: 2,
-    name: "Ivory Oversized Blazer",
-    price: "620",
-    category: "Outerwear",
-    image: "https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=600&q=80",
-  },
-  {
-    id: 3,
-    name: "Graphite Utility Vest",
-    price: "285",
-    category: "Tops",
-    image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&q=80",
-  },
-  {
-    id: 4,
-    name: "Noir Relaxed Hoodie",
-    price: "195",
-    category: "Tops",
-    image: "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=600&q=80",
-  },
-  {
-    id: 5,
-    name: "Cream Wide-Leg Jean",
-    price: "310",
-    category: "Bottoms",
-    image: "https://images.unsplash.com/photo-1604176354204-9268737828e4?w=600&q=80",
-  },
-  {
-    id: 6,
-    name: "Shadow Trench Coat",
-    price: "890",
-    category: "Outerwear",
-    image: "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=600&q=80",
-  },
-];
+const CATEGORIES = ["T-Shirts", "Hoodies", "Tracksuits", "Shoes", "Accessories"];
 
-const CATEGORIES = ["Tops", "Bottoms", "Outerwear", "Footwear", "Accessories"];
+const emptyForm = {
+  name: "", price: "", category: "T-Shirts",
+  description: "", badge: "",
+  sizes: "", colors: "", image: "", inStock: true,
+};
 
-const emptyForm = { name: "", price: "", image: "", category: "Tops" };
-
-export default function StorexAdmin() {
+export default function AdminPage() {
   const [products, setProducts] = useState(() => {
     try {
       const stored = localStorage.getItem("storex_products");
@@ -59,11 +19,11 @@ export default function StorexAdmin() {
     }
   });
   const [search, setSearch] = useState("");
-  const [modal, setModal] = useState(null); // null | { mode: 'add' | 'edit', data }
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteId, setDeleteId] = useState(null);
   const [visible, setVisible] = useState(false);
-  const nextId = useRef(100);
+  const nextId = useRef(Date.now());
 
   useEffect(() => {
     localStorage.setItem("storex_products", JSON.stringify(products));
@@ -85,19 +45,42 @@ export default function StorexAdmin() {
   };
 
   const openEdit = (product) => {
-    setForm({ name: product.name, price: product.price, image: product.image, category: product.category });
+    setForm({
+      name: product.name,
+      price: product.price,
+      category: product.category,
+      description: product.description || "",
+      badge: product.badge || "",
+      sizes: Array.isArray(product.sizes) ? product.sizes.join(", ") : product.sizes || "",
+      colors: Array.isArray(product.colors) ? product.colors.join(", ") : product.colors || "",
+      image: Array.isArray(product.images) ? product.images[0] : product.image || "",
+      inStock: product.inStock ?? true,
+    });
     setModal({ mode: "edit", id: product.id });
   };
 
   const closeModal = () => setModal(null);
 
   const saveProduct = () => {
-    if (!form.name.trim() || !form.price.trim()) return;
+    if (!form.name.trim() || !form.price) return;
+    const shaped = {
+      ...form,
+      price: parseFloat(form.price),
+      sizes: typeof form.sizes === "string"
+        ? form.sizes.split(",").map((s) => s.trim()).filter(Boolean)
+        : form.sizes,
+      colors: typeof form.colors === "string"
+        ? form.colors.split(",").map((c) => c.trim()).filter(Boolean)
+        : form.colors,
+      badge: form.badge?.trim() || null,
+      images: [form.image].filter(Boolean),
+      inStock: true,
+    };
     if (modal.mode === "add") {
-      setProducts((prev) => [...prev, { ...form, id: nextId.current++ }]);
+      setProducts((prev) => [...prev, { ...shaped, id: nextId.current++ }]);
     } else {
       setProducts((prev) =>
-        prev.map((p) => (p.id === modal.id ? { ...p, ...form } : p))
+        prev.map((p) => (p.id === modal.id ? { ...p, ...shaped } : p))
       );
     }
     closeModal();
@@ -108,39 +91,44 @@ export default function StorexAdmin() {
     setDeleteId(null);
   };
 
+  const getImage = (p) =>
+    (Array.isArray(p.images) ? p.images[0] : p.image) ||
+    "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=600&q=80";
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-          --black: #0a0a0a;
-          --off-black: #111111;
+          --black:    #0a0a0a;
+          --off-black:#111111;
           --charcoal: #1c1c1c;
-          --mid: #2e2e2e;
-          --muted: #888;
-          --cream: #f5f2eb;
-          --white: #ffffff;
-          --gold: #c9a84c;
+          --mid:      #2e2e2e;
+          --muted:    #888;
+          --cream:    #f5f2eb;
+          --white:    #ffffff;
+          --gold:     #c9a84c;
           --gold-dim: #a8893c;
-          --gold-glow: rgba(201,168,76,0.18);
+          --red:      #c0392b;
         }
 
         body { background: var(--off-black); color: var(--white); font-family: 'DM Sans', sans-serif; }
 
-        .page {
+        /* PAGE */
+        .sx-page {
           min-height: 100vh;
           background: var(--off-black);
           opacity: 0;
           transform: translateY(12px);
-          transition: opacity 0.7s ease, transform 0.7s ease;
+          transition: opacity 0.65s ease, transform 0.65s ease;
         }
-        .page.visible { opacity: 1; transform: translateY(0); }
+        .sx-page.visible { opacity: 1; transform: translateY(0); }
 
-        /* ── HEADER ── */
-        .header {
+        /* HEADER */
+        .sx-header {
           padding: 48px 56px 32px;
           border-bottom: 1px solid var(--charcoal);
           display: flex;
@@ -148,9 +136,7 @@ export default function StorexAdmin() {
           justify-content: space-between;
           gap: 24px;
         }
-        .header-left {}
-        .header-eyebrow {
-          font-family: 'DM Sans', sans-serif;
+        .sx-eyebrow {
           font-size: 10px;
           font-weight: 500;
           letter-spacing: 0.35em;
@@ -158,51 +144,47 @@ export default function StorexAdmin() {
           text-transform: uppercase;
           margin-bottom: 10px;
         }
-        .header-title {
+        .sx-title {
           font-family: 'Playfair Display', serif;
-          font-size: clamp(28px, 4vw, 44px);
+          font-size: clamp(26px, 4vw, 42px);
           font-weight: 500;
           letter-spacing: 0.05em;
           color: var(--white);
           line-height: 1;
         }
-        .header-title span { color: var(--gold); font-style: italic; }
-        .header-meta {
-          font-size: 12px;
+        .sx-title span { color: var(--gold); font-style: italic; }
+        .sx-meta {
+          font-size: 11px;
           color: var(--muted);
-          letter-spacing: 0.08em;
+          letter-spacing: 0.1em;
           margin-top: 10px;
         }
-        .header-stats {
-          display: flex;
-          gap: 32px;
-          align-items: center;
-        }
-        .stat {
-          text-align: right;
-        }
-        .stat-val {
+        .sx-stats { display: flex; gap: 32px; align-items: center; }
+        .sx-stat { text-align: right; }
+        .sx-stat-val {
           font-family: 'Playfair Display', serif;
           font-size: 28px;
-          font-weight: 400;
           color: var(--cream);
           line-height: 1;
         }
-        .stat-label {
+        .sx-stat-label {
           font-size: 10px;
           letter-spacing: 0.2em;
           color: var(--muted);
           text-transform: uppercase;
           margin-top: 4px;
         }
-        .stat-divider {
-          width: 1px;
-          height: 40px;
-          background: var(--charcoal);
+        .sx-divider { width: 1px; height: 40px; background: var(--charcoal); }
+
+        /* GOLD LINE */
+        .sx-gold-line {
+          height: 1px;
+          background: linear-gradient(90deg, transparent, var(--gold), transparent);
+          opacity: 0.35;
         }
 
-        /* ── ACTION BAR ── */
-        .action-bar {
+        /* ACTION BAR */
+        .sx-bar {
           padding: 28px 56px;
           display: flex;
           align-items: center;
@@ -210,21 +192,16 @@ export default function StorexAdmin() {
           gap: 20px;
           border-bottom: 1px solid var(--charcoal);
         }
-        .search-wrap {
-          position: relative;
-          flex: 1;
-          max-width: 360px;
-        }
-        .search-icon {
+        .sx-search-wrap { position: relative; flex: 1; max-width: 360px; }
+        .sx-search-icon {
           position: absolute;
-          left: 16px;
-          top: 50%;
+          left: 16px; top: 50%;
           transform: translateY(-50%);
           color: var(--muted);
-          font-size: 14px;
+          font-size: 15px;
           pointer-events: none;
         }
-        .search-input {
+        .sx-search {
           width: 100%;
           background: var(--charcoal);
           border: 1px solid #2a2a2a;
@@ -236,10 +213,10 @@ export default function StorexAdmin() {
           outline: none;
           transition: border-color 0.2s;
         }
-        .search-input::placeholder { color: var(--muted); }
-        .search-input:focus { border-color: var(--gold); }
+        .sx-search::placeholder { color: var(--muted); }
+        .sx-search:focus { border-color: var(--gold); }
 
-        .btn-add {
+        .sx-btn-add {
           background: var(--gold);
           color: var(--black);
           border: none;
@@ -250,377 +227,325 @@ export default function StorexAdmin() {
           letter-spacing: 0.25em;
           text-transform: uppercase;
           cursor: pointer;
-          transition: background 0.2s, transform 0.15s;
           white-space: nowrap;
+          transition: background 0.2s, transform 0.15s;
         }
-        .btn-add:hover { background: var(--gold-dim); transform: translateY(-1px); }
-        .btn-add:active { transform: translateY(0); }
+        .sx-btn-add:hover { background: var(--gold-dim); transform: translateY(-1px); }
 
-        /* ── GRID ── */
-        .grid-section { padding: 40px 56px 64px; }
-        .grid-label {
+        /* GRID */
+        .sx-grid-section { padding: 40px 56px 64px; }
+        .sx-grid-label {
           font-size: 10px;
           letter-spacing: 0.3em;
           color: var(--muted);
           text-transform: uppercase;
           margin-bottom: 28px;
         }
-        .grid-label span { color: var(--gold); }
-        .grid {
+        .sx-grid-label span { color: var(--gold); }
+        .sx-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
           gap: 2px;
         }
 
-        /* ── CARD ── */
-        .card {
+        /* CARD */
+        .sx-card {
           background: var(--black);
           position: relative;
           overflow: hidden;
-          cursor: default;
           transition: transform 0.3s cubic-bezier(.25,.8,.25,1), box-shadow 0.3s cubic-bezier(.25,.8,.25,1);
-          animation: fadeUp 0.5s ease both;
+          animation: sxFadeUp 0.5s ease both;
         }
-        .card:hover {
+        .sx-card:hover {
           transform: translateY(-6px);
           box-shadow: 0 24px 48px rgba(0,0,0,0.6), 0 0 0 1px var(--gold);
           z-index: 2;
         }
-        @keyframes fadeUp {
+        @keyframes sxFadeUp {
           from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
-        .card-img-wrap {
-          width: 100%;
-          aspect-ratio: 3/4;
-          overflow: hidden;
-          background: var(--charcoal);
+        .sx-card-img {
+          width: 100%; aspect-ratio: 3/4;
+          overflow: hidden; background: var(--charcoal);
           position: relative;
         }
-        .card-img-wrap img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        .sx-card-img img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
           transition: transform 0.6s cubic-bezier(.25,.8,.25,1);
-          display: block;
         }
-        .card:hover .card-img-wrap img { transform: scale(1.06); }
+        .sx-card:hover .sx-card-img img { transform: scale(1.06); }
 
-        .card-category-badge {
-          position: absolute;
-          top: 14px;
-          left: 14px;
+        .sx-badge {
+          position: absolute; top: 14px; left: 14px;
           background: rgba(10,10,10,0.85);
           backdrop-filter: blur(4px);
           border: 1px solid var(--gold);
           color: var(--gold);
-          font-size: 9px;
-          letter-spacing: 0.25em;
-          text-transform: uppercase;
-          padding: 5px 10px;
+          font-size: 9px; letter-spacing: 0.25em;
+          text-transform: uppercase; padding: 5px 10px;
           font-family: 'DM Sans', sans-serif;
         }
+        .sx-stock-dot {
+          position: absolute; top: 14px; right: 14px;
+          width: 8px; height: 8px; border-radius: 50%;
+          background: #27ae60;
+          box-shadow: 0 0 6px rgba(39,174,96,0.7);
+        }
 
-        .card-body { padding: 20px 20px 16px; }
-        .card-name {
+        .sx-card-body { padding: 20px 20px 0; }
+        .sx-card-name {
           font-family: 'Playfair Display', serif;
-          font-size: 17px;
-          font-weight: 400;
-          color: var(--cream);
-          margin-bottom: 8px;
-          line-height: 1.3;
+          font-size: 17px; font-weight: 400;
+          color: var(--cream); margin-bottom: 6px; line-height: 1.3;
         }
-        .card-price {
-          font-size: 12px;
-          letter-spacing: 0.1em;
-          color: var(--muted);
-          font-weight: 300;
+        .sx-card-price {
+          font-size: 12px; letter-spacing: 0.08em; color: var(--muted);
         }
-        .card-price span {
+        .sx-card-price span {
           color: var(--gold);
-          font-size: 16px;
           font-family: 'Playfair Display', serif;
-          font-weight: 400;
-          margin-right: 3px;
+          font-size: 16px; margin-right: 2px;
         }
-
-        .card-actions {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          border-top: 1px solid #1e1e1e;
-          margin-top: 16px;
+        .sx-card-meta {
+          margin-top: 10px;
+          display: flex; flex-wrap: wrap; gap: 6px;
         }
-        .card-btn {
-          background: none;
-          border: none;
-          color: var(--muted);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.2em;
+        .sx-tag {
+          background: var(--charcoal);
+          font-size: 9px; letter-spacing: 0.15em;
+          color: var(--muted); padding: 4px 8px;
           text-transform: uppercase;
-          padding: 12px 0;
-          cursor: pointer;
-          transition: color 0.2s, background 0.2s;
         }
-        .card-btn:hover.edit { color: var(--cream); background: #181818; }
-        .card-btn:hover.del  { color: #e05c5c; background: #1a1010; }
-        .card-btn.edit { border-right: 1px solid #1e1e1e; }
+        .sx-card-actions {
+          display: grid; grid-template-columns: 1fr 1fr;
+          border-top: 1px solid #1e1e1e; margin-top: 16px;
+        }
+        .sx-card-btn {
+          background: none; border: none;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 10px; letter-spacing: 0.2em;
+          text-transform: uppercase;
+          padding: 13px 0; cursor: pointer;
+          transition: color 0.2s, background 0.2s;
+          color: var(--muted);
+        }
+        .sx-card-btn.edit { border-right: 1px solid #1e1e1e; }
+        .sx-card-btn.edit:hover { color: var(--cream); background: #181818; }
+        .sx-card-btn.del:hover  { color: #e05c5c; background: #1a1010; }
 
-        /* ── MODAL OVERLAY ── */
-        .overlay {
+        /* MODAL */
+        .sx-overlay {
           position: fixed; inset: 0;
           background: rgba(0,0,0,0.82);
           backdrop-filter: blur(6px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 999;
-          animation: overlayIn 0.25s ease;
-          padding: 20px;
+          display: flex; align-items: center; justify-content: center;
+          z-index: 999; padding: 20px;
+          animation: sxOverlayIn 0.2s ease;
         }
-        @keyframes overlayIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        .modal {
+        @keyframes sxOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+        .sx-modal {
           background: var(--off-black);
           border: 1px solid var(--charcoal);
-          width: 100%;
-          max-width: 480px;
-          animation: modalIn 0.3s cubic-bezier(.34,1.56,.64,1);
-          position: relative;
+          width: 100%; max-width: 500px;
+          max-height: 90vh; overflow-y: auto;
+          animation: sxModalIn 0.3s cubic-bezier(.34,1.56,.64,1);
         }
-        @keyframes modalIn {
+        .sx-modal::-webkit-scrollbar { width: 4px; }
+        .sx-modal::-webkit-scrollbar-track { background: var(--charcoal); }
+        .sx-modal::-webkit-scrollbar-thumb { background: var(--gold); }
+        @keyframes sxModalIn {
           from { opacity: 0; transform: scale(0.94) translateY(16px); }
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .modal-header {
+        .sx-modal-header {
           padding: 28px 32px 20px;
           border-bottom: 1px solid var(--charcoal);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+          display: flex; align-items: center; justify-content: space-between;
+          position: sticky; top: 0; background: var(--off-black); z-index: 1;
         }
-        .modal-title {
+        .sx-modal-title {
           font-family: 'Playfair Display', serif;
-          font-size: 20px;
-          font-weight: 400;
-          color: var(--cream);
+          font-size: 20px; font-weight: 400; color: var(--cream);
         }
-        .modal-title em { color: var(--gold); font-style: italic; }
-        .modal-close {
-          background: none;
-          border: none;
-          color: var(--muted);
-          font-size: 20px;
-          cursor: pointer;
-          line-height: 1;
-          padding: 4px;
+        .sx-modal-title em { color: var(--gold); font-style: italic; }
+        .sx-modal-close {
+          background: none; border: none; color: var(--muted);
+          font-size: 22px; cursor: pointer; line-height: 1; padding: 4px;
           transition: color 0.2s;
         }
-        .modal-close:hover { color: var(--white); }
-        .modal-body { padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; }
-
-        .field label {
-          display: block;
-          font-size: 9px;
-          letter-spacing: 0.3em;
-          color: var(--muted);
-          text-transform: uppercase;
-          margin-bottom: 8px;
+        .sx-modal-close:hover { color: var(--white); }
+        .sx-modal-body {
+          padding: 28px 32px;
+          display: flex; flex-direction: column; gap: 16px;
         }
-        .field input, .field select {
+        .sx-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .sx-field label {
+          display: block; font-size: 9px; letter-spacing: 0.3em;
+          color: var(--muted); text-transform: uppercase; margin-bottom: 7px;
+        }
+        .sx-field input, .sx-field select, .sx-field textarea {
           width: 100%;
           background: var(--charcoal);
           border: 1px solid #2a2a2a;
           color: var(--white);
           font-family: 'DM Sans', sans-serif;
-          font-size: 13px;
-          padding: 12px 14px;
-          outline: none;
-          transition: border-color 0.2s;
+          font-size: 13px; padding: 11px 14px;
+          outline: none; transition: border-color 0.2s;
           -webkit-appearance: none;
         }
-        .field input:focus, .field select:focus { border-color: var(--gold); }
-        .field select { cursor: pointer; background-image: none; }
-        .field select option { background: var(--charcoal); }
+        .sx-field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+        .sx-field input:focus,
+        .sx-field select:focus,
+        .sx-field textarea:focus { border-color: var(--gold); }
+        .sx-field select option { background: var(--charcoal); }
+        .sx-field-hint {
+          font-size: 10px; color: #555; margin-top: 5px; letter-spacing: 0.02em;
+        }
 
-        .modal-footer {
+        .sx-modal-footer {
           padding: 20px 32px 28px;
-          display: flex;
-          gap: 12px;
-          justify-content: flex-end;
+          display: flex; gap: 12px; justify-content: flex-end;
           border-top: 1px solid var(--charcoal);
         }
-        .btn-cancel {
-          background: none;
-          border: 1px solid var(--charcoal);
-          color: var(--muted);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          padding: 11px 24px;
-          cursor: pointer;
+        .sx-btn-cancel {
+          background: none; border: 1px solid var(--charcoal);
+          color: var(--muted); font-family: 'DM Sans', sans-serif;
+          font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+          padding: 11px 22px; cursor: pointer;
           transition: border-color 0.2s, color 0.2s;
         }
-        .btn-cancel:hover { border-color: var(--muted); color: var(--white); }
-        .btn-save {
-          background: var(--gold);
-          border: none;
-          color: var(--black);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: 0.25em;
-          text-transform: uppercase;
-          padding: 11px 28px;
-          cursor: pointer;
-          transition: background 0.2s;
+        .sx-btn-cancel:hover { border-color: var(--muted); color: var(--white); }
+        .sx-btn-save {
+          background: var(--gold); border: none; color: var(--black);
+          font-family: 'DM Sans', sans-serif; font-size: 10px;
+          font-weight: 500; letter-spacing: 0.25em; text-transform: uppercase;
+          padding: 11px 28px; cursor: pointer; transition: background 0.2s;
         }
-        .btn-save:hover { background: var(--gold-dim); }
+        .sx-btn-save:hover { background: var(--gold-dim); }
 
-        /* ── DELETE CONFIRM ── */
-        .confirm-modal {
+        /* DELETE CONFIRM */
+        .sx-confirm {
           background: var(--off-black);
           border: 1px solid #2a1a1a;
-          max-width: 380px;
-          width: 100%;
-          padding: 36px 32px;
-          text-align: center;
-          animation: modalIn 0.3s cubic-bezier(.34,1.56,.64,1);
+          max-width: 380px; width: 100%;
+          padding: 40px 32px; text-align: center;
+          animation: sxModalIn 0.3s cubic-bezier(.34,1.56,.64,1);
         }
-        .confirm-icon {
-          font-size: 32px;
-          margin-bottom: 16px;
-          color: #e05c5c;
-        }
-        .confirm-title {
+        .sx-confirm-icon { font-size: 30px; color: #e05c5c; margin-bottom: 16px; }
+        .sx-confirm-title {
           font-family: 'Playfair Display', serif;
-          font-size: 20px;
-          color: var(--cream);
-          margin-bottom: 10px;
+          font-size: 20px; color: var(--cream); margin-bottom: 10px;
         }
-        .confirm-sub {
-          font-size: 13px;
-          color: var(--muted);
-          margin-bottom: 28px;
-          line-height: 1.6;
+        .sx-confirm-sub {
+          font-size: 13px; color: var(--muted);
+          margin-bottom: 28px; line-height: 1.6;
         }
-        .confirm-actions { display: flex; gap: 12px; justify-content: center; }
-        .btn-del-confirm {
-          background: #c0392b;
-          border: none;
-          color: var(--white);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          padding: 12px 24px;
-          cursor: pointer;
-          transition: background 0.2s;
+        .sx-confirm-actions { display: flex; gap: 12px; justify-content: center; }
+        .sx-btn-del {
+          background: var(--red); border: none; color: var(--white);
+          font-family: 'DM Sans', sans-serif; font-size: 10px;
+          font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase;
+          padding: 12px 24px; cursor: pointer; transition: background 0.2s;
         }
-        .btn-del-confirm:hover { background: #a93226; }
+        .sx-btn-del:hover { background: #a93226; }
 
-        /* ── EMPTY STATE ── */
-        .empty {
-          text-align: center;
-          padding: 80px 20px;
-          color: var(--muted);
-        }
-        .empty-icon { font-size: 36px; margin-bottom: 16px; opacity: 0.4; }
-        .empty-title {
+        /* EMPTY */
+        .sx-empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+        .sx-empty-icon { font-size: 32px; margin-bottom: 16px; opacity: 0.3; }
+        .sx-empty-title {
           font-family: 'Playfair Display', serif;
-          font-size: 22px;
-          color: var(--cream);
-          margin-bottom: 8px;
-          opacity: 0.6;
-        }
-
-        /* ── GOLD LINE DECORATOR ── */
-        .gold-line {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, var(--gold), transparent);
-          opacity: 0.4;
+          font-size: 22px; color: var(--cream);
+          margin-bottom: 8px; opacity: 0.5;
         }
 
         @media (max-width: 640px) {
-          .header { flex-direction: column; align-items: flex-start; padding: 32px 24px 24px; }
-          .action-bar { flex-direction: column; align-items: stretch; padding: 20px 24px; }
-          .search-wrap { max-width: 100%; }
-          .grid-section { padding: 28px 24px 48px; }
+          .sx-header  { flex-direction: column; align-items: flex-start; padding: 32px 24px 24px; }
+          .sx-bar     { flex-direction: column; align-items: stretch; padding: 20px 24px; }
+          .sx-search-wrap { max-width: 100%; }
+          .sx-grid-section { padding: 28px 24px 48px; }
+          .sx-row     { grid-template-columns: 1fr; }
         }
       `}</style>
 
-      <div className={`page ${visible ? "visible" : ""}`}>
+      <div className={`sx-page ${visible ? "visible" : ""}`}>
 
-        {/* Header */}
-        <div className="header">
-          <div className="header-left">
-            <div className="header-eyebrow">Management Console</div>
-            <div className="header-title">STOREX <span>Admin</span> Panel</div>
-            <div className="header-meta">SEASON 2025 · EDITORIAL COLLECTION</div>
+        {/* ── Header ── */}
+        <div className="sx-header">
+          <div>
+            <div className="sx-eyebrow">Management Console</div>
+            <div className="sx-title">STOREX <span>Admin</span> Panel</div>
+            <div className="sx-meta">SEASON 2025 · EDITORIAL COLLECTION</div>
           </div>
-          <div className="header-stats">
-            <div className="stat">
-              <div className="stat-val">{products.length}</div>
-              <div className="stat-label">Products</div>
+          <div className="sx-stats">
+            <div className="sx-stat">
+              <div className="sx-stat-val">{products.length}</div>
+              <div className="sx-stat-label">Products</div>
             </div>
-            <div className="stat-divider" />
-            <div className="stat">
-              <div className="stat-val">{[...new Set(products.map(p => p.category))].length}</div>
-              <div className="stat-label">Categories</div>
+            <div className="sx-divider" />
+            <div className="sx-stat">
+              <div className="sx-stat-val">{[...new Set(products.map(p => p.category))].length}</div>
+              <div className="sx-stat-label">Categories</div>
             </div>
           </div>
         </div>
 
-        <div className="gold-line" />
+        <div className="sx-gold-line" />
 
-        {/* Action bar */}
-        <div className="action-bar">
-          <div className="search-wrap">
-            <span className="search-icon">⌕</span>
+        {/* ── Action Bar ── */}
+        <div className="sx-bar">
+          <div className="sx-search-wrap">
+            <span className="sx-search-icon">⌕</span>
             <input
-              className="search-input"
+              className="sx-search"
               placeholder="Search products, categories…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button className="btn-add" onClick={openAdd}>+ Add Product</button>
+          <button className="sx-btn-add" onClick={openAdd}>+ Add Product</button>
         </div>
 
-        {/* Grid */}
-        <div className="grid-section">
-          <div className="grid-label">
+        {/* ── Grid ── */}
+        <div className="sx-grid-section">
+          <div className="sx-grid-label">
             Showing <span>{filtered.length}</span> of {products.length} items
           </div>
           {filtered.length === 0 ? (
-            <div className="empty">
-              <div className="empty-icon">◻</div>
-              <div className="empty-title">No products found</div>
+            <div className="sx-empty">
+              <div className="sx-empty-icon">◻</div>
+              <div className="sx-empty-title">No products found</div>
               <div>Try a different search or add a new product.</div>
             </div>
           ) : (
-            <div className="grid">
+            <div className="sx-grid">
               {filtered.map((p, i) => (
                 <div
                   key={p.id}
-                  className="card"
-                  style={{ animationDelay: `${i * 60}ms` }}
+                  className="sx-card"
+                  style={{ animationDelay: `${i * 55}ms` }}
                 >
-                  <div className="card-img-wrap">
-                    <img src={p.image || "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=600&q=80"} alt={p.name} />
-                    <div className="card-category-badge">{p.category}</div>
+                  <div className="sx-card-img">
+                    <img src={getImage(p)} alt={p.name} />
+                    {p.badge && <div className="sx-badge">{p.badge}</div>}
+                    {p.inStock && <div className="sx-stock-dot" title="In Stock" />}
                   </div>
-                  <div className="card-body">
-                    <div className="card-name">{p.name}</div>
-                    <div className="card-price"><span>$</span>{parseFloat(p.price).toLocaleString()}</div>
-                    <div className="card-actions">
-                      <button className="card-btn edit" onClick={() => openEdit(p)}>Edit</button>
-                      <button className="card-btn del" onClick={() => setDeleteId(p.id)}>Delete</button>
+                  <div className="sx-card-body">
+                    <div className="sx-card-name">{p.name}</div>
+                    <div className="sx-card-price"><span>$</span>{parseFloat(p.price).toLocaleString()}</div>
+                    <div className="sx-card-meta">
+                      <span className="sx-tag">{p.category}</span>
+                      {Array.isArray(p.sizes) && p.sizes.slice(0, 3).map(s => (
+                        <span key={s} className="sx-tag">{s}</span>
+                      ))}
+                      {Array.isArray(p.sizes) && p.sizes.length > 3 && (
+                        <span className="sx-tag">+{p.sizes.length - 3}</span>
+                      )}
+                    </div>
+                    <div className="sx-card-actions">
+                      <button className="sx-card-btn edit" onClick={() => openEdit(p)}>Edit</button>
+                      <button className="sx-card-btn del" onClick={() => setDeleteId(p.id)}>Delete</button>
                     </div>
                   </div>
                 </div>
@@ -630,18 +555,19 @@ export default function StorexAdmin() {
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* ── Add / Edit Modal ── */}
       {modal && (
-        <div className="overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-          <div className="modal">
-            <div className="modal-header">
-              <div className="modal-title">
+        <div className="sx-overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
+          <div className="sx-modal">
+            <div className="sx-modal-header">
+              <div className="sx-modal-title">
                 {modal.mode === "add" ? <>Add <em>New</em> Product</> : <>Edit <em>Product</em></>}
               </div>
-              <button className="modal-close" onClick={closeModal}>×</button>
+              <button className="sx-modal-close" onClick={closeModal}>×</button>
             </div>
-            <div className="modal-body">
-              <div className="field">
+            <div className="sx-modal-body">
+
+              <div className="sx-field">
                 <label>Product Name</label>
                 <input
                   placeholder="e.g. Midnight Cargo Trouser"
@@ -649,36 +575,80 @@ export default function StorexAdmin() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </div>
-              <div className="field">
-                <label>Price (USD)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 340"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                />
+
+              <div className="sx-row">
+                <div className="sx-field">
+                  <label>Price (MAD)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 349"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  />
+                </div>
+                <div className="sx-field">
+                  <label>Category</label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  >
+                    {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="field">
+
+              <div className="sx-field">
                 <label>Image URL</label>
                 <input
-                  placeholder="https://…"
+                  placeholder="https://images.unsplash.com/…"
                   value={form.image}
                   onChange={(e) => setForm({ ...form, image: e.target.value })}
                 />
               </div>
-              <div className="field">
-                <label>Category</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                >
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                </select>
+
+              <div className="sx-field">
+                <label>Description</label>
+                <textarea
+                  placeholder="Short product description…"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
               </div>
+
+              <div className="sx-row">
+                <div className="sx-field">
+                  <label>Sizes</label>
+                  <input
+                    placeholder="S, M, L, XL"
+                    value={form.sizes}
+                    onChange={(e) => setForm({ ...form, sizes: e.target.value })}
+                  />
+                  <div className="sx-field-hint">Comma separated</div>
+                </div>
+                <div className="sx-field">
+                  <label>Colors</label>
+                  <input
+                    placeholder="Black, White"
+                    value={form.colors}
+                    onChange={(e) => setForm({ ...form, colors: e.target.value })}
+                  />
+                  <div className="sx-field-hint">Comma separated</div>
+                </div>
+              </div>
+
+              <div className="sx-field">
+                <label>Badge <span style={{ color: "#444", fontWeight: 300 }}>(optional)</span></label>
+                <input
+                  placeholder="New · Hot · Limited · Best Seller"
+                  value={form.badge}
+                  onChange={(e) => setForm({ ...form, badge: e.target.value })}
+                />
+              </div>
+
             </div>
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={closeModal}>Cancel</button>
-              <button className="btn-save" onClick={saveProduct}>
+            <div className="sx-modal-footer">
+              <button className="sx-btn-cancel" onClick={closeModal}>Cancel</button>
+              <button className="sx-btn-save" onClick={saveProduct}>
                 {modal.mode === "add" ? "Publish Product" : "Save Changes"}
               </button>
             </div>
@@ -686,18 +656,18 @@ export default function StorexAdmin() {
         </div>
       )}
 
-      {/* Delete Confirm */}
+      {/* ── Delete Confirm ── */}
       {deleteId !== null && (
-        <div className="overlay" onClick={(e) => e.target === e.currentTarget && setDeleteId(null)}>
-          <div className="confirm-modal">
-            <div className="confirm-icon">⚠</div>
-            <div className="confirm-title">Remove Product</div>
-            <div className="confirm-sub">
+        <div className="sx-overlay" onClick={(e) => e.target === e.currentTarget && setDeleteId(null)}>
+          <div className="sx-confirm">
+            <div className="sx-confirm-icon">⚠</div>
+            <div className="sx-confirm-title">Remove Product</div>
+            <div className="sx-confirm-sub">
               This item will be permanently removed from the collection. This action cannot be undone.
             </div>
-            <div className="confirm-actions">
-              <button className="btn-cancel" onClick={() => setDeleteId(null)}>Cancel</button>
-              <button className="btn-del-confirm" onClick={() => deleteProduct(deleteId)}>Remove</button>
+            <div className="sx-confirm-actions">
+              <button className="sx-btn-cancel" onClick={() => setDeleteId(null)}>Cancel</button>
+              <button className="sx-btn-del" onClick={() => deleteProduct(deleteId)}>Remove</button>
             </div>
           </div>
         </div>
