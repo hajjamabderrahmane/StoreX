@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
@@ -14,9 +14,32 @@ export default function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState([]);
 
+  // ✅ handle browser back
+  useEffect(() => {
+    const handleBack = (event) => {
+      if (event.state) {
+        setCurrentPage(event.state.page);
+        if (event.state.data) setSelectedProduct(event.state.data);
+      }
+    };
+
+    window.addEventListener("popstate", handleBack);
+
+    return () => window.removeEventListener("popstate", handleBack);
+  }, []);
+
+  // ✅ initial history state
+  useEffect(() => {
+    window.history.replaceState({ page: "home" }, "", "");
+  }, []);
+
+  // ✅ navigation function
   const navigate = (page, data = null) => {
     setCurrentPage(page);
     if (data) setSelectedProduct(data);
+
+    window.history.pushState({ page, data }, "", "");
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -45,13 +68,11 @@ export default function App() {
 
   return (
     <div className="app">
-      {currentPage !== "admin" && (
-        <Navbar
-          onNavigate={navigate}
-          cartCount={cart.reduce((s, i) => s + i.qty, 0)}
-          onCartOpen={() => setCartOpen(true)}
-        />
-      )}
+      <Navbar
+        onNavigate={navigate}
+        cartCount={cart.reduce((s, i) => s + i.qty, 0)}
+        onCartOpen={() => setCartOpen(true)}
+      />
 
       {currentPage === "home" && (
         <HomePage
@@ -77,25 +98,23 @@ export default function App() {
         <ProductPage
           product={selectedProduct}
           onAddToCart={addToCart}
-          onBack={() => navigate("shop")}
+          onBack={() => window.history.back()} // 🔥 back button حقيقي
           onNavigate={navigate}
         />
       )}
 
-      {currentPage === "admin" && <AdminPage />}
+      {currentPage === "admin" && (
+  <AdminPage />
+)}
 
-      {currentPage !== "admin" && (
-        <CartDrawer
-          open={cartOpen}
-          onClose={() => setCartOpen(false)}
-          cart={cart}
-          onRemove={removeFromCart}
-        />
-      )}
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        cart={cart}
+        onRemove={removeFromCart}
+      />
 
-      {currentPage !== "admin" && (
-        <Footer onNavigate={navigate} />
-      )}
+      <Footer onNavigate={navigate} />
     </div>
   );
 }
